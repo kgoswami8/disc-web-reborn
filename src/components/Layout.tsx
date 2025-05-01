@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Navigation from './Navigation';
 
 interface LayoutProps {
@@ -16,6 +17,9 @@ const Layout = ({ children }: LayoutProps) => {
       <footer className="border-t py-6 bg-white/80">
         <div className="container text-center text-sm text-muted-foreground">
           © {new Date().getFullYear()} DISC Assessment. All rights reserved.
+          <div className="mt-2">
+            <Link to="/admin" className="text-primary hover:underline">Admin</Link>
+          </div>
         </div>
       </footer>
     </div>

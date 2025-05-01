@@ -16,8 +16,9 @@ const Assessment = () => {
     // Add answer to selected answers
     const newAnswers = [...selectedAnswers.filter(a => a.questionId !== questionId), { questionId, optionType }];
     setSelectedAnswers(newAnswers);
-    
-    // If not the last question, go to next question
+  };
+
+  const handleNext = () => {
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     }
@@ -34,7 +35,7 @@ const Assessment = () => {
     navigate('/results', { state: { answers: selectedAnswers } });
   };
 
-  const progressPercentage = isStarted ? ((currentQuestion + 1) / questions.length) * 100 : 0;
+  const progressPercentage = isStarted ? (currentQuestion / questions.length) * 100 : 0;
   
   if (!isStarted) {
     return (
@@ -70,6 +71,8 @@ const Assessment = () => {
   }
 
   const question: Question = questions[currentQuestion];
+  const isCurrentQuestionAnswered = selectedAnswers.some(a => a.questionId === question.id);
+  const isLastQuestion = currentQuestion === questions.length - 1;
 
   return (
     <div className="container max-w-3xl py-8 animate-fade-in">
@@ -122,17 +125,17 @@ const Assessment = () => {
             Previous
           </Button>
           
-          {currentQuestion === questions.length - 1 ? (
+          {isLastQuestion ? (
             <Button 
               onClick={handleSubmit}
-              disabled={selectedAnswers.length < questions.length}
+              disabled={!isCurrentQuestionAnswered || selectedAnswers.length < questions.length}
             >
               Submit
             </Button>
           ) : (
             <Button 
-              onClick={() => setCurrentQuestion(currentQuestion + 1)}
-              disabled={!selectedAnswers.some(a => a.questionId === question.id)}
+              onClick={handleNext}
+              disabled={!isCurrentQuestionAnswered}
             >
               Next
             </Button>
