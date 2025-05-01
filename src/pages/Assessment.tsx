@@ -81,11 +81,15 @@ const Assessment = () => {
       optionType: answer.mostLikely || 'D'  // Default to 'D' if somehow null
     }));
 
-    // Navigate to results page with answers and user info
+    // Add timestamp to the results
+    const timestamp = new Date().toISOString();
+
+    // Navigate to results page with answers, user info and timestamp
     navigate('/results', { 
       state: { 
         answers: transformedAnswers,
-        userInfo
+        userInfo,
+        timestamp
       } 
     });
   };
@@ -198,12 +202,14 @@ const Assessment = () => {
                 className="space-y-3"
               >
                 {question.options.map((option, index) => (
-                  <div key={`most-${index}`} className="flex items-center space-x-3 rounded-md border p-4 hover:bg-accent">
+                  <label 
+                    key={`most-${index}`} 
+                    className="flex items-center space-x-3 rounded-md border p-4 hover:bg-accent cursor-pointer"
+                    onClick={() => handleMostLikelySelect(question.id, option.type)}
+                  >
                     <RadioGroupItem value={option.type} id={`q${question.id}-most-${index}`} />
-                    <label htmlFor={`q${question.id}-most-${index}`} className="flex-1 cursor-pointer">
-                      {option.text}
-                    </label>
-                  </div>
+                    <span className="flex-1">{option.text}</span>
+                  </label>
                 ))}
               </RadioGroup>
             </div>
@@ -217,12 +223,14 @@ const Assessment = () => {
                 className="space-y-3"
               >
                 {question.options.map((option, index) => (
-                  <div key={`least-${index}`} className="flex items-center space-x-3 rounded-md border p-4 hover:bg-accent">
+                  <label 
+                    key={`least-${index}`} 
+                    className="flex items-center space-x-3 rounded-md border p-4 hover:bg-accent cursor-pointer"
+                    onClick={() => handleLeastLikelySelect(question.id, option.type)}
+                  >
                     <RadioGroupItem value={option.type} id={`q${question.id}-least-${index}`} />
-                    <label htmlFor={`q${question.id}-least-${index}`} className="flex-1 cursor-pointer">
-                      {option.text}
-                    </label>
-                  </div>
+                    <span className="flex-1">{option.text}</span>
+                  </label>
                 ))}
               </RadioGroup>
             </div>
