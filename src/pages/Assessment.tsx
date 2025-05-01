@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { questions, Question, DiscType } from '@/lib/disc-data';
 
 const Assessment = () => {
@@ -35,7 +36,7 @@ const Assessment = () => {
     navigate('/results', { state: { answers: selectedAnswers } });
   };
 
-  const progressPercentage = isStarted ? (currentQuestion / questions.length) * 100 : 0;
+  const progressPercentage = isStarted ? ((currentQuestion + 1) / questions.length) * 100 : 0;
   
   if (!isStarted) {
     return (
@@ -74,6 +75,10 @@ const Assessment = () => {
   const isCurrentQuestionAnswered = selectedAnswers.some(a => a.questionId === question.id);
   const isLastQuestion = currentQuestion === questions.length - 1;
 
+  // Group options by type (most likely/least likely)
+  const mostLikelyOptions = question.options.slice(0, 2);
+  const leastLikelyOptions = question.options.slice(2, 4);
+
   return (
     <div className="container max-w-3xl py-8 animate-fade-in">
       <div className="mb-8 space-y-2">
@@ -90,33 +95,46 @@ const Assessment = () => {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl">{question.text}</CardTitle>
+          <CardTitle className="text-2xl">Question {currentQuestion + 1}: {question.text}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {question.options.map((option, index) => {
-            const isSelected = selectedAnswers.some(a => 
-              a.questionId === question.id && a.optionType === option.type
-            );
-            
-            return (
-              <div 
-                key={index}
-                className={`answer-option ${isSelected ? 'selected' : ''}`}
-                onClick={() => handleOptionSelect(question.id, option.type)}
-              >
-                <div className="flex-1">
-                  <p>{option.text}</p>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-primary">I am most likely to:</h3>
+            <RadioGroup 
+              value={selectedAnswers.find(a => a.questionId === question.id)?.optionType}
+              onValueChange={(value) => handleOptionSelect(question.id, value as DiscType)}
+              className="space-y-3"
+            >
+              {mostLikelyOptions.map((option, index) => (
+                <div key={index} className="flex items-center space-x-3 rounded-md border p-4 hover:bg-accent">
+                  <RadioGroupItem value={option.type} id={`q${question.id}-option-${index}`} />
+                  <label htmlFor={`q${question.id}-option-${index}`} className="flex-1 cursor-pointer">
+                    {option.text}
+                  </label>
                 </div>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                  isSelected ? 'border-primary bg-primary/20' : 'border-muted'
-                }`}>
-                  {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+              ))}
+            </RadioGroup>
+          </div>
+          
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-primary">I am least likely to:</h3>
+            <RadioGroup 
+              value={selectedAnswers.find(a => a.questionId === question.id)?.optionType}
+              onValueChange={(value) => handleOptionSelect(question.id, value as DiscType)}
+              className="space-y-3"
+            >
+              {leastLikelyOptions.map((option, index) => (
+                <div key={index + 2} className="flex items-center space-x-3 rounded-md border p-4 hover:bg-accent">
+                  <RadioGroupItem value={option.type} id={`q${question.id}-option-${index + 2}`} />
+                  <label htmlFor={`q${question.id}-option-${index + 2}`} className="flex-1 cursor-pointer">
+                    {option.text}
+                  </label>
                 </div>
-              </div>
-            );
-          })}
+              ))}
+            </RadioGroup>
+          </div>
         </CardContent>
-        <CardFooter className="flex justify-between">
+        <CardFooter className="flex justify-between pt-6">
           <Button
             variant="outline"
             onClick={handlePrevious}
@@ -130,14 +148,14 @@ const Assessment = () => {
               onClick={handleSubmit}
               disabled={!isCurrentQuestionAnswered || selectedAnswers.length < questions.length}
             >
-              Submit
+              Submit Assessment
             </Button>
           ) : (
             <Button 
               onClick={handleNext}
               disabled={!isCurrentQuestionAnswered}
             >
-              Next
+              Next Question
             </Button>
           )}
         </CardFooter>
