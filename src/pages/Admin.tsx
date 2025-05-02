@@ -1,72 +1,104 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { discDescriptions, DiscType } from '@/lib/disc-data';
+import { discDescriptions, DiscType, calculateDiscProfile } from '@/lib/disc-data';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 
-// Mock data for admin view
-const mockResults = [
-  { 
-    id: 1, 
-    name: 'John Doe', 
-    email: 'john@example.com', 
-    date: '2025-04-28', 
-    primaryType: 'D' as DiscType, 
-    secondaryType: 'I' as DiscType,
-    scores: { D: 75, I: 60, S: 30, C: 45 },
-    strengths: ['Takes initiative', 'Gets results', 'Makes quick decisions'],
-    challenges: ['Can be impatient', 'May overlook details', 'Can be too direct'],
-    communication: 'Prefers direct, straightforward communication focused on results.'
-  },
-  { 
-    id: 2, 
-    name: 'Jane Smith', 
-    email: 'jane@example.com', 
-    date: '2025-04-29', 
-    primaryType: 'S' as DiscType, 
-    secondaryType: 'C' as DiscType,
-    scores: { D: 25, I: 40, S: 80, C: 65 },
-    strengths: ['Patient', 'Reliable', 'Good listener', 'Detail-oriented'],
-    challenges: ['May resist change', 'Can avoid conflict', 'May be indecisive'],
-    communication: 'Prefers gentle, personal communication with time to process information.'
-  },
-  { 
-    id: 3, 
-    name: 'Alice Johnson', 
-    email: 'alice@example.com', 
-    date: '2025-05-01', 
-    primaryType: 'I' as DiscType, 
-    secondaryType: 'D' as DiscType,
-    scores: { D: 55, I: 85, S: 30, C: 35 },
-    strengths: ['Enthusiastic', 'Persuasive', 'Inspiring', 'Optimistic'],
-    challenges: ['May talk too much', 'Can be disorganized', 'Might overpromise'],
-    communication: 'Enjoys socializing, storytelling and expressing ideas in an engaging way.'
-  },
-  { 
-    id: 4, 
-    name: 'Bob Williams', 
-    email: 'bob@example.com', 
-    date: '2025-04-30', 
-    primaryType: 'C' as DiscType, 
-    secondaryType: 'S' as DiscType,
-    scores: { D: 35, I: 25, S: 60, C: 90 },
-    strengths: ['Analytical', 'Detail-oriented', 'Organized', 'Thorough'],
-    challenges: ['Can be overly critical', 'May be perfectionistic', 'Might avoid risk'],
-    communication: 'Prefers communication based on logic, facts, and details with time to analyze.'
-  },
-];
+// Interface for stored assessment results
+interface StoredAssessmentResult {
+  answers: { questionId: number; optionType: DiscType }[];
+  userInfo: { name: string; email: string };
+  timestamp: string;
+  rawAnswers: { questionId: number; mostLikely: DiscType | null; leastLikely: DiscType | null }[];
+}
+
+// Interface for processed assessment results to display
+interface ProcessedResult {
+  id: number;
+  name: string;
+  email: string;
+  date: string;
+  primaryType: DiscType;
+  secondaryType: DiscType;
+  scores: { D: number; I: number; S: number; C: number };
+  strengths: string[];
+  challenges: string[];
+  communication: string;
+}
 
 const Admin = () => {
   const [filter, setFilter] = useState<string>('all');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState<typeof mockResults[0] | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<ProcessedResult | null>(null);
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
+  const [assessmentResults, setAssessmentResults] = useState<ProcessedResult[]>([]);
+
+  // Load results from localStorage
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadResults();
+    }
+  }, [isAuthenticated]);
+
+  const loadResults = () => {
+    try {
+      // Get results from localStorage
+      const storedResults = localStorage.getItem('disc_assessment_results');
+      if (storedResults) {
+        const parsedResults: StoredAssessmentResult[] = JSON.parse(storedResults);
+        
+        // Process the raw results into the format we need
+        const processedResults: ProcessedResult[] = parsedResults.map((result, index) => {
+          // Calculate DISC profile from answers
+          const discResult = calculateDiscProfile(result.answers);
+          
+          // Format date from timestamp
+          const date = new Date(result.timestamp).toLocaleDateString();
+          
+          // Generate random strengths, challenges based on primary type (in real app this would be derived from the assessment)
+          const primaryType = discResult.primary;
+          const primaryInfo = discDescriptions[primaryType];
+          
+          return {
+            id: index + 1,
+            name: result.userInfo.name,
+            email: result.userInfo.email,
+            date,
+            primaryType: discResult.primary,
+            secondaryType: discResult.secondary || 'D',
+            scores: discResult.profile,
+            strengths: primaryInfo.strengths,
+            challenges: primaryInfo.challenges,
+            communication: primaryInfo.communication
+          };
+        });
+        
+        setAssessmentResults(processedResults);
+        
+        // Show success toast if results loaded
+        if (processedResults.length > 0) {
+          toast({
+            title: "Results Loaded",
+            description: `Loaded ${processedResults.length} assessment results.`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading results from localStorage:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load assessment results.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleLogin = () => {
     // In a real app, this would validate against a backend
@@ -74,13 +106,17 @@ const Admin = () => {
     if (password === 'admin123') {
       setIsAuthenticated(true);
     } else {
-      alert('Incorrect password');
+      toast({
+        title: "Authentication Failed",
+        description: "Incorrect password.",
+        variant: "destructive",
+      });
     }
   };
 
   const filteredResults = filter === 'all' 
-    ? mockResults 
-    : mockResults.filter(result => result.primaryType === filter);
+    ? assessmentResults 
+    : assessmentResults.filter(result => result.primaryType === filter);
 
   const getTypeColor = (type: DiscType) => {
     const colors = {
@@ -92,9 +128,20 @@ const Admin = () => {
     return colors[type];
   };
 
-  const handleViewDetails = (employee: typeof mockResults[0]) => {
+  const handleViewDetails = (employee: ProcessedResult) => {
     setSelectedEmployee(employee);
     setIsDetailSheetOpen(true);
+  };
+
+  const handleClearResults = () => {
+    if (confirm("Are you sure you want to clear all assessment results? This cannot be undone.")) {
+      localStorage.removeItem('disc_assessment_results');
+      setAssessmentResults([]);
+      toast({
+        title: "Results Cleared",
+        description: "All assessment results have been cleared.",
+      });
+    }
   };
 
   if (!isAuthenticated) {
@@ -128,7 +175,13 @@ const Admin = () => {
   return (
     <div className="container py-12 animate-fade-in">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">DISC Assessment Results</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">DISC Assessment Results</h1>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={loadResults}>Refresh Results</Button>
+            <Button variant="destructive" onClick={handleClearResults}>Clear All Results</Button>
+          </div>
+        </div>
         
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-3">Filter by Primary Type</h2>
@@ -175,40 +228,48 @@ const Admin = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredResults.map((result) => (
-                  <TableRow key={result.id}>
-                    <TableCell className="font-medium">{result.name}</TableCell>
-                    <TableCell>{result.email}</TableCell>
-                    <TableCell>{result.date}</TableCell>
-                    <TableCell>
-                      <span className={`font-bold ${getTypeColor(result.primaryType)}`}>
-                        {result.primaryType} - {discDescriptions[result.primaryType].title}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`font-bold ${getTypeColor(result.secondaryType)}`}>
-                        {result.secondaryType} - {discDescriptions[result.secondaryType].title}
-                      </span>
-                    </TableCell>
-                    <TableCell>{result.scores.D}%</TableCell>
-                    <TableCell>{result.scores.I}%</TableCell>
-                    <TableCell>{result.scores.S}%</TableCell>
-                    <TableCell>{result.scores.C}%</TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="outline" onClick={() => handleViewDetails(result)}>
-                        View Details
-                      </Button>
+                {filteredResults.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-6">
+                      No assessment results found. Once users complete assessments, their results will appear here.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredResults.map((result) => (
+                    <TableRow key={result.id}>
+                      <TableCell className="font-medium">{result.name}</TableCell>
+                      <TableCell>{result.email}</TableCell>
+                      <TableCell>{result.date}</TableCell>
+                      <TableCell>
+                        <span className={`font-bold ${getTypeColor(result.primaryType)}`}>
+                          {result.primaryType} - {discDescriptions[result.primaryType].title}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`font-bold ${getTypeColor(result.secondaryType)}`}>
+                          {result.secondaryType} - {discDescriptions[result.secondaryType].title}
+                        </span>
+                      </TableCell>
+                      <TableCell>{result.scores.D}%</TableCell>
+                      <TableCell>{result.scores.I}%</TableCell>
+                      <TableCell>{result.scores.S}%</TableCell>
+                      <TableCell>{result.scores.C}%</TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="outline" onClick={() => handleViewDetails(result)}>
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
         
         <p className="text-sm text-muted-foreground mt-4">
-          Note: In a production environment, this data would be stored in a database and retrieved through a secure API.
-          The current implementation uses mock data for demonstration purposes.
+          Note: Results are currently stored in your browser's localStorage. In a production environment,
+          this data would be stored in a database and retrieved through a secure API.
         </p>
       </div>
 

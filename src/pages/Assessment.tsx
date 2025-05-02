@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { toast } from '@/hooks/use-toast';
 
 const Assessment = () => {
   const navigate = useNavigate();
@@ -83,6 +84,34 @@ const Assessment = () => {
 
     // Add timestamp to the results
     const timestamp = new Date().toISOString();
+    
+    // Create full results object
+    const fullResults = {
+      answers: transformedAnswers,
+      userInfo,
+      timestamp,
+      rawAnswers: selectedAnswers
+    };
+    
+    // Save to localStorage
+    try {
+      // Get existing results or initialize empty array
+      const existingResults = JSON.parse(localStorage.getItem('disc_assessment_results') || '[]');
+      
+      // Add new result
+      existingResults.push(fullResults);
+      
+      // Save back to localStorage
+      localStorage.setItem('disc_assessment_results', JSON.stringify(existingResults));
+      
+      // Show success toast
+      toast({
+        title: "Assessment Completed",
+        description: "Your results have been saved successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving results to localStorage:", error);
+    }
 
     // Navigate to results page with answers, user info and timestamp
     navigate('/results', { 
