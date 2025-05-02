@@ -17,6 +17,7 @@ export interface ProcessedResult {
   name: string;
   email: string;
   date: string;
+  dateObj: Date; // Add Date object for accurate sorting
   primaryType: DiscType;
   secondaryType: DiscType;
   scores: { D: number; I: number; S: number; C: number };
@@ -50,8 +51,10 @@ export const useAssessmentResults = (isAuthenticated: boolean) => {
           // Calculate DISC profile from answers
           const discResult = calculateDiscProfile(result.answers);
           
+          // Create Date object for sorting
+          const dateObj = new Date(result.timestamp);
           // Format date from timestamp
-          const date = new Date(result.timestamp).toLocaleDateString();
+          const date = dateObj.toLocaleDateString() + " " + dateObj.toLocaleTimeString();
           
           // Generate random strengths, challenges based on primary type (in real app this would be derived from the assessment)
           const primaryType = discResult.primary;
@@ -62,6 +65,7 @@ export const useAssessmentResults = (isAuthenticated: boolean) => {
             name: result.userInfo.name,
             email: result.userInfo.email,
             date,
+            dateObj, // Store date object for sorting
             primaryType: discResult.primary,
             secondaryType: discResult.secondary || 'D',
             scores: discResult.profile,
@@ -70,6 +74,9 @@ export const useAssessmentResults = (isAuthenticated: boolean) => {
             communication: primaryInfo.communication
           };
         });
+
+        // Sort results with newest first
+        processedResults.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
         
         setAssessmentResults(processedResults);
         
